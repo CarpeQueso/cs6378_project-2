@@ -12,8 +12,6 @@ public class Node {
 
 	private HashMap<Integer, Neighbor> neighbors;
 
-	private HashMap<Integer, Socket> neighborSockets;
-
 	private ConcurrentLinkedQueue<Message> messageQueue;
 
 	public Node(int id, String hostname, int port) {
@@ -27,6 +25,12 @@ public class Node {
 
 	public void addNeighbor(int id, String hostname, int port) {
 		this.neighbors.put(id, new Neighbor(id, hostname, port));
+
+		try {
+
+		} catch (IOException e) {
+			System.err.println("Could not create neighbor socket");
+		}
 	}
 
 	public int getId() {
