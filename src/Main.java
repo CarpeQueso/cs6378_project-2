@@ -1,4 +1,5 @@
 import java.io.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Main {
@@ -10,8 +11,9 @@ public class Main {
 	private int maxPeractive;
 	private int minSendDelay;
 	private int snapshotDelay;
+	private int maxNumber;
 	private HashMap<Integer,String[]> hostInfo =new HashMap<Integer,String[]>();  //stores nodeID,hostname,port for node i
-	private HashMap<Integer,String[]> neighborName =new HashMap<Integer,String[]>(); //stores neighbours with node i
+	private HashMap<Integer,ArrayList<Integer>> neighborName =new HashMap<Integer,ArrayList<Integer>>(); //stores neighbours with node i
 	
 	public void parseConfig(){
 		try {
@@ -22,6 +24,7 @@ public class Main {
 			maxPeractive = Integer.parseInt(host[2]);
 			minSendDelay = Integer.parseInt(host[3]);
 			snapshotDelay = Integer.parseInt(host[4]);
+			maxNumber = Integer.parseInt(host[5]);
 			
 			for(int i=0;i<nodeNumber;i++){
 				String[] a = read(configuration).split(" ");
@@ -30,14 +33,17 @@ public class Main {
 			
 			for(int i=0;i<nodeNumber;i++){
 				String[] b = read(configuration).split(" ");
-				neighborName.put(i,b);
+				ArrayList<Integer> c = new ArrayList<Integer>(); 
+				int j = 0;
+				for(String a : b){
+					c.add(Integer.parseInt(a));
+					j++;
+				}
+				neighborName.put(i,c);
 			}
 			
 //			for(int i=0;i<nodeNumber;i++){
-//				for(int j=0;j<neighborName.get(i).length;j++){
-//					System.out.print(neighborName.get(i)[j]);
-//				}
-//				System.out.println( );
+//				System.out.println(neighborName.get(i));
 //			}
 			
 		} catch (IOException e) {
@@ -60,8 +66,35 @@ public class Main {
 		return back;
 }
 	
-	public static void main(String[] args) {		
+	public HashMap<Integer,ArrayList<Integer>> generateST(){
+		HashMap<Integer,ArrayList<Integer>> spanningTree = new HashMap<Integer,ArrayList<Integer>>();
+		ArrayList<Integer> sum =new ArrayList<Integer>();
+		sum.add(0);
+	    for(int i=0;i<nodeNumber;i++){	 //initialize spanningTree
+	    	spanningTree.put(i, new ArrayList<Integer>());
+	    }
+	    
+		for(int i=0;i<nodeNumber;i++){
+			for(int j:neighborName.get(i)){
+				if(!sum.contains(j)){
+					spanningTree.get(i).add(j);
+					spanningTree.get(j).add(i);
+					sum.add(j);
+				}
+			}
+		}
 		
+//		for(int i=0;i<spanningTree.size();i++){
+//			System.out.println(spanningTree.get(i));
+//		}
+		
+		return spanningTree;
+	}
+	
+	public static void main(String[] args) {		
+//		Main main = new Main();
+//		main.parseConfig();
+//		main.generateST();
 		
 	}
 }
