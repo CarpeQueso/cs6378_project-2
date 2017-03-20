@@ -16,6 +16,14 @@ public class Node {
 
 	private ConcurrentLinkedQueue<Message> messageQueue;
 
+/**
+ * static int messageSent;
+ * public sendMessage(){messageSent++;}
+ * if messageSent >= maxNumber && passive
+ * send HaltMessage;
+ */
+// every time login to a remote machine.we create a node on that machine?
+	
 	public Node(int id, String hostname, int port) {
 		this.id = id;
 		this.hostname = hostname;
@@ -60,5 +68,6 @@ public class Node {
 	public int getPort() {
 		return this.port;
 	}
+	
 
 }
