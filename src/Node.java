@@ -12,9 +12,26 @@ public class Node {
 
 	private final int port;
 
+	private final int minPerActive;
+
+	private final int maxPerActive;
+
+	private final int minSendDelay;
+
+	private final int snapshotDelay;
+
+	private final int maxNumber;
+
+	private final int parentNodeId;
+
+	// Only used to size the vector clock.
+	private final int totalNodes;
+	
 	private HashMap<Integer, Neighbor> neighbors;
 
 	private ConcurrentLinkedQueue<Message> messageQueue;
+
+	private VectorClock vectorClock;
 
 /**
  * static int messageSent;
@@ -24,13 +41,23 @@ public class Node {
  */
 // every time login to a remote machine.we create a node on that machine?
 	
-	public Node(int id, String hostname, int port) {
+	public Node(int id, String hostname, int port, int totalNodes, int minPerActive,
+				int maxPerActive, int minSendDelay, int snapshotDelay, int maxNumber,
+				int parentNodeId) {
 		this.id = id;
 		this.hostname = hostname;
 		this.port = port;
+		this.totalNodes = totalNodes;
+		this.minPerActive = minPerActive;
+		this.maxPerActive = maxPerActive;
+		this.minSendDelay = minSendDelay;
+		this.snapshotDelay = snapshotDelay;
+		this.maxNumber = maxNumber;
+		this.parentNodeId = parentNodeId;
 
 		this.neighbors = new HashMap<>();
 		this.messageQueue = new ConcurrentLinkedQueue<>();
+		this.vectorClock = new VectorClock(totalNodes);
 	}
 
 	public void addNeighbor(int id, String hostname, int port) {
@@ -51,7 +78,8 @@ public class Node {
 					out.println(message.toString());
 				}
 			} catch (IOException e) {
-				System.err.println("Unable to send message to neighbor with id: " + neighbor.getId());
+				System.err.println("Unable to send message to neighbor with id: "
+								   + neighbor.getId());
 			}
 		}
 	}
