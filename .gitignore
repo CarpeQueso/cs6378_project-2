@@ -1,1 +1,4 @@
 ./launch/compile.sh
+./bin/*
+./test/bin/*
+*~

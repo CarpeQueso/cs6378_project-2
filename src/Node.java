@@ -1,5 +1,6 @@
 import java.io.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.HashMap;
 
 
 public class Node {
@@ -20,17 +21,10 @@ public class Node {
 		this.port = port;
 
 		this.neighbors = new HashMap<>();
-		this.neighborSockets = new HashMap<>();
 	}
 
 	public void addNeighbor(int id, String hostname, int port) {
 		this.neighbors.put(id, new Neighbor(id, hostname, port));
-
-		try {
-
-		} catch (IOException e) {
-			System.err.println("Could not create neighbor socket");
-		}
 	}
 
 	public int getId() {
