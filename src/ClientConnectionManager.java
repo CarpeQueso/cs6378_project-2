@@ -11,12 +11,12 @@ public class ClientConnectionManager implements Runnable {
 
 	private Queue<Message> messageQueue;
 
-	private boolean shouldStop;
+	private volatile boolean running;
 
 	public ClientConnectionManager(Socket socket, Queue<Message> messageQueue) {
 		this.socket = socket;
 		this.messageQueue = messageQueue;
-		this.shouldStop = false;
+		this.running = true;
 	}
 
 	public void run() {
@@ -25,7 +25,7 @@ public class ClientConnectionManager implements Runnable {
 				    = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
 			String messageString = reader.readLine();
 
-			while (!shouldStop && messageString != null) {
+			while (running && messageString != null) {
 				Message message = Message.parseMessage(messageString);
 				if (message != null) {
 					messageQueue.offer(message);
@@ -42,6 +42,6 @@ public class ClientConnectionManager implements Runnable {
 	}
 
 	public void stop() {
-		this.shouldStop = true;
+		this.running = false;
 	}
 }

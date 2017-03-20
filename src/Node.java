@@ -27,6 +27,8 @@ public class Node {
 	// Only used to size the vector clock.
 	private final int totalNodes;
 	
+	private ServerController serverController;
+	
 	private HashMap<Integer, Neighbor> neighbors;
 
 	private ConcurrentLinkedQueue<Message> messageQueue;
@@ -55,6 +57,7 @@ public class Node {
 		this.maxNumber = maxNumber;
 		this.parentNodeId = parentNodeId;
 
+		this.serverController = new ServerController(port, messageQueue);
 		this.neighbors = new HashMap<>();
 		this.messageQueue = new ConcurrentLinkedQueue<>();
 		this.vectorClock = new VectorClock(totalNodes);
@@ -67,6 +70,18 @@ public class Node {
 		} catch (IOException e) {
 			System.err.println("Could not create neighbor socket");
 		}
+	}
+
+	public void begin() {
+
+	}
+
+	public void startServer() {
+		new Thread(serverController).start();
+	}
+
+	public void stopServer() {
+		serverController.stop();
 	}
 
 	public void broadcast(Message message) {

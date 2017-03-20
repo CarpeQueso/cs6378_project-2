@@ -93,4 +93,15 @@ public class VectorClock {
 
 		return sb.toString();
 	}
+
+	public static VectorClock parseVectorClock(String clockString) {
+		String[] clockValueStrings = clockString.split("\\s+");
+		int[] clockValues = new int[clockValueStrings.length];
+
+		for (int i = 0; i < clockValueStrings.length; i++) {
+			clockValues[i] = Integer.parseInt(clockValueStrings[i]);
+		}
+
+		return new VectorClock(clockValues.length, clockValues);
+	}
 }

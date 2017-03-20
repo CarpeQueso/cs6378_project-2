@@ -1,5 +1,8 @@
 
 
 public enum MessageType {
-	APPLICATION, CONTROL, HALT
+	MAP,
+	SNAPSHOT,
+	HALT,
+	UNKNOWN
 }
