@@ -1,4 +1,4 @@
-
+import java.net.Socket;
 
 public class Neighbor {
 
@@ -8,10 +8,29 @@ public class Neighbor {
 
 	private final int port;
 
-	public Neighbor(int id, String hostname, int port) {
+	private final Socket socket;
+
+	private boolean enabled;
+
+	public Neighbor(int id, String hostname, int port, Socket socket) {
 		this.id = id;
 		this.hostname = hostname;
 		this.port = port;
+		this.socket = socket;
+
+		this.enabled = true;
+	}
+
+	public void disable() {
+		this.enabled = false;
+	}
+
+	public void enable() {
+		this.enabled = true;
+	}
+
+	public boolean isEnabled() {
+		return this.enabled;
 	}
 
 	public int getId() {
@@ -24,5 +43,9 @@ public class Neighbor {
 
 	public int getPort() {
 		return this.port;
+	}
+
+	public Socket getSocket() {
+		return this.socket;
 	}
 }

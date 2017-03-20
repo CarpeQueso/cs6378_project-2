@@ -1,4 +1,4 @@
 ./launch/compile.sh
-./bin/*
-./test/bin/*
+./bin/*.class
+./test/bin/*.class
 *~
