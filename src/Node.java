@@ -150,7 +150,7 @@ public class Node implements Runnable {
 
 	public void run() {
 		// Assumes node has been activated prior to running
-
+		
 	}
 
 	public int getId() {
@@ -169,8 +169,7 @@ public class Node implements Runnable {
 		switch (message.getType()) {
 		case MAP:
 			VectorClock vc = VectorClock.parseVectorClock(message.getBody());
-			this.vectorClock.update(vc);
-			this.vectorClock.increment(this.id);
+			this.vectorClock.updateAndIncrement(vc, this.id);
 
 			if (!isMapActive() && mapTotalMessagesSent < maxNumber) {
 				mapActivate();

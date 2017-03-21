@@ -33,7 +33,7 @@ public class VectorClock {
 	 * Update this vector clock based on the given vector clock.
 	 * The maximum value for a given position will be stored in this clock.
 	 */
-	public synchronized void update(VectorClock vc) {
+	public synchronized void updateAndIncrement(VectorClock vc, int index) {
 		assert vc.getSize() == this.size;
 		int[] passedClockVector = vc.getClockVector();
 
@@ -42,6 +42,8 @@ public class VectorClock {
 				this.clock[i] = passedClockVector[i];
 			}
 		}
+
+		this.increment(index);
 	}
 
 	public synchronized VectorComparisonType compareTo(VectorClock vc) {
