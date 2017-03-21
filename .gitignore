@@ -1,12 +1,4 @@
-<<<<<<< HEAD
 launch/compile.sh
 bin/*.class
 test/bin/*.class
-
-=======
-./launch/compile.sh
-./bin/*
-./test/bin/*
-*~
-/bin/
->>>>>>> 945583eba38e6ac7997d5742acda501af544ca4c
+#*

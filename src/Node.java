@@ -4,14 +4,14 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.HashMap;
 
 
-public class Node {
+public class Node implements Runnable {
 
 	private final int id;
 
 	private final String hostname;
 
 	private final int port;
-
+	
 	private final int minPerActive;
 
 	private final int maxPerActive;
@@ -26,6 +26,12 @@ public class Node {
 
 	// Only used to size the vector clock.
 	private final int totalNodes;
+	
+	private volatile boolean mapActive;
+	
+	private volatile int mapTotalMessagesSent;
+	
+	private boolean running;
 	
 	private ServerController serverController;
 	
@@ -57,6 +63,7 @@ public class Node {
 		this.maxNumber = maxNumber;
 		this.parentNodeId = parentNodeId;
 
+		this.mapTotalMessagesSent = 0;
 		this.serverController = new ServerController(port, messageQueue);
 		this.neighbors = new HashMap<>();
 		this.messageQueue = new ConcurrentLinkedQueue<>();
@@ -73,7 +80,20 @@ public class Node {
 	}
 
 	public void begin() {
+		if (this.id == 0) {
+			mapActivate();
+			// Do other snapshot setup stuff
+		}
 
+		this.running = true;
+
+		while (running) {
+			if (!messageQueue.isEmpty()) {
+				processMessage(messageQueue.poll());
+			}
+		}
+
+			 
 	}
 
 	public void startServer() {
@@ -84,6 +104,35 @@ public class Node {
 		serverController.stop();
 	}
 
+	public synchronized void mapActivate() {
+		this.mapActive = true;
+	}
+
+	public synchronized void mapDeactivate() {
+		this.mapActive = false;
+	}
+
+	public synchronized boolean isMapActive() {
+		return this.mapActive;
+	}
+		
+	public void unicast(int neighborId, Message message) {
+		Neighbor neighbor = neighbors.get(neighborId);
+
+		if (neighbor == null) return;
+
+		try(
+			PrintWriter out = new PrintWriter(neighbor.getSocket().getOutputStream(), true)
+			) {
+			if (neighbor.isEnabled()) {
+				out.println(message.toString());
+			}
+		} catch (IOException e) {
+			System.err.println("Unable to send unicast message to neighbor with id: "
+							   + neighbor.getId());
+		}
+	}
+	
 	public void broadcast(Message message) {
 		for (Neighbor neighbor : neighbors.values()) {
 			try(
@@ -99,6 +148,10 @@ public class Node {
 		}
 	}
 
+	public void run() {
+		// Assumes node has been activated prior to running
+
+	}
 
 	public int getId() {
 		return this.id;
@@ -112,5 +165,19 @@ public class Node {
 		return this.port;
 	}
 	
+	private void processMessage(Message message) {
+		switch (message.getType()) {
+		case MAP:
+			VectorClock vc = VectorClock.parseVectorClock(message.getBody());
+			this.vectorClock.update(vc);
+			this.vectorClock.increment(this.id);
 
+			if (!isMapActive() && mapTotalMessagesSent < maxNumber) {
+				mapActivate();
+				new Thread(this).start();
+			}
+			break;
+		default:
+		}
+	}
 }
