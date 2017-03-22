@@ -8,10 +8,15 @@ public class Snapshot {
 
 	private final int numQueuedMessages;
 
-	public Snapshot(boolean active, boolean canBeReactivated, int numQueuedMessages) {
+	private final int[] clockVector;
+
+	public Snapshot(boolean active, boolean canBeReactivated, int numQueuedMessages,
+					int[] clockVector) {
 		this.active = active;
 		this.canBeReactivated = canBeReactivated;
 		this.numQueuedMessages = numQueuedMessages;
+		this.clockVector = new int[clockVector.length];
+		System.arraycopy(clockVector, 0, this.clockVector, 0, clockVector.length);
 	}
 
 	public boolean isActive() {
@@ -26,6 +31,10 @@ public class Snapshot {
 		return this.numQueuedMessages;
 	}
 
+	public int[] getClockVector() {
+		return this.clockVector;
+	}
+
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 
@@ -33,7 +42,13 @@ public class Snapshot {
 		sb.append(",");
 		sb.append(this.canBeReactivated);
 		sb.append(",");
-		sb.append(numQueuedMessages);
+		sb.append(this.numQueuedMessages);
+		sb.append(",");
+		sb.append(this.clockVector[0]);
+		for (int i = 1; i < this.clockVector.length; i++) {
+			sb.append(" ");
+			sb.append(this.clockVector[i]);
+		}
 
 		return sb.toString();
 	}
@@ -44,7 +59,12 @@ public class Snapshot {
 		boolean active = Boolean.parseBoolean(snapshotComponentStrings[0]);
 		boolean canBeReactivated = Boolean.parseBoolean(snapshotComponentStrings[1]);
 		int numQueuedMessages = Integer.parseInt(snapshotComponentStrings[2]);
+		String[] clockVectorStringValues = snapshotComponentStrings[3].split("\\s+");
+		int[] clockVector = new int[clockVectorStringValues.length];
+		for (int i = 0; i < clockVectorStringValues.length; i++) {
+			clockVector[i] = Integer.parseInt(clockVectorStringValues[i]);
+		}
 
-		return new Snapshot(active, canBeReactivated, numQueuedMessages);
+		return new Snapshot(active, canBeReactivated, numQueuedMessages, clockVector);
 	}
 }

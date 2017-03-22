@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -35,6 +36,18 @@ public class Node implements Runnable {
 	private volatile int mapTotalMessagesSent;
 	
 	private boolean running;
+
+	private boolean hasSentHaltMessage;
+
+    private boolean hasSentMarkerMessage;
+
+	private boolean snapshotInProgress;
+	
+	private int numHaltMessagesReceived;
+	
+	private int numMarkerMessagesReceived;
+	
+	private int numSnapshotsCollectedThisRound;
 	
 	private ServerController serverController;
 	
@@ -44,7 +57,11 @@ public class Node implements Runnable {
 
 	private LinkedList<Message> deferQueue;
 
+	private LinkedList<Snapshot> snapshotsTaken;
+	
 	private VectorClock vectorClock;
+
+	private Snapshot[] snapshotsCollectedThisRound;
 
 /**
  * static int messageSent;
@@ -68,12 +85,20 @@ public class Node implements Runnable {
 		this.maxNumber = maxNumber;
 		this.parentNodeId = parentNodeId;
 
+		this.hasSentHaltMessage = false;
+		this.hasSentMarkerMessage = false;
+		this.snapshotInProgress = false;
+		this.numHaltMessagesReceived = 0;
+		this.numMarkerMessagesReceived = 0;
 		this.mapTotalMessagesSent = 0;
+		this.numSnapshotsCollectedThisRound = 0;
 		this.serverController = new ServerController(port, messageQueue);
 		this.neighbors = new HashMap<>();
 		this.messageQueue = new ConcurrentLinkedQueue<>();
 		this.deferQueue = new LinkedList<>();
+		this.snapshotsTaken = new LinkedList<>();
 		this.vectorClock = new VectorClock(totalNodes);
+		this.snapshotsCollectedThisRound = new Snapshot[totalNodes];
 	}
 
 	public void addNeighbor(int id, String hostname, int port) {
@@ -86,20 +111,35 @@ public class Node implements Runnable {
 	}
 
 	public void begin() {
-		if (this.id == 0) {
-			mapActivate();
-			// Do other snapshot setup stuff
-		}
-
+		long timer = System.currentTimeMillis();
 		this.running = true;
 
-		while (running) {
+		if (this.id == 0) {
+			mapActivate();
+			new Thread(this).start();
+
+		}
+
+		while (numHaltMessagesReceived < neighbors.size()) {
 			if (!messageQueue.isEmpty()) {
 				processMessage(messageQueue.poll());
 			}
+
+			if (!deferQueue.isEmpty() && !snapshotInProgress) {
+				while (!deferQueue.isEmpty()) {
+					processMessage(messageQueue.poll());
+				}
+			}
+
+			if (this.id == 0 && System.currentTimeMillis() - timer > this.snapshotDelay) {
+				// Initiate Snapshot
+				broadcast(new Message(MessageType.MARKER, this.id, "none"));
+				hasSentMarkerMessage = true;
+				snapshotInProgress = true;
+			}	
 		}
 
-			 
+		// TODO: Print config file information
 	}
 
 	public void startServer() {
@@ -168,7 +208,8 @@ public class Node implements Runnable {
 			this.vectorClock.increment(this.id);
 			String vectorClockString = this.vectorClock.toString();
 
-			unicast(nextMessageNeighborId, new Message(MessageType.MAP, this.id, vectorClockString));
+			unicast(nextMessageNeighborId,
+					new Message(MessageType.MAP, this.id, vectorClockString));
 			messagesSentThisCycle++;
 			mapTotalMessagesSent++;
 			try {
@@ -196,19 +237,91 @@ public class Node implements Runnable {
 	private void processMessage(Message message) {
 		switch (message.getType()) {
 		case MAP:
-			VectorClock vc = VectorClock.parseVectorClock(message.getBody());
-			this.vectorClock.updateAndIncrement(vc, this.id);
+			if (snapshotInProgress) {
+				deferQueue.add(message);
+			} else {
+				VectorClock vc = VectorClock.parseVectorClock(message.getBody());
+				this.vectorClock.updateAndIncrement(vc, this.id);
 
-			if (!isMapActive() && mapTotalMessagesSent < maxNumber) {
-				mapActivate();
-				new Thread(this).start();
+				if (!isMapActive() && mapTotalMessagesSent < maxNumber) {
+					mapActivate();
+					new Thread(this).start();
+				}
 			}
 			break;
+		case MARKER:
+			if (!hasSentMarkerMessage) {
+				broadcast(new Message(MessageType.MARKER, this.id, "none"));
+				hasSentMarkerMessage = true;
+				snapshotInProgress = true;	
+			}
+
+			numMarkerMessagesReceived++;
+			if (numMarkerMessagesReceived >= neighbors.size()) {
+				snapshotInProgress = false;
+				boolean active = isMapActive();
+				boolean canBeReactivated = mapTotalMessagesSent < maxNumber;
+				int numQueuedMessages = deferQueue.size();
+				int[] clockVector = vectorClock.getClockVector();
+				
+				Snapshot snapshot
+					= new Snapshot(active, canBeReactivated, numQueuedMessages, clockVector);
+				snapshotsTaken.add(snapshot);
+				if (id == 0) {
+					snapshotsCollectedThisRound[0] = snapshot;
+				} else {
+					unicast(parentNodeId,
+							new Message(MessageType.SNAPSHOT, this.id, snapshot.toString()));
+				}
+			}
+				
+			break;
 		case SNAPSHOT:
+			if (this.id == 0) {
+				processSnapshotMessage(message);
+			} else {
+				// Send it upward toward the root of the spanning tree.
+				unicast(parentNodeId, message);
+			}
 			break;
 		case HALT:
+			if (!hasSentHaltMessage) {
+				broadcast(new Message(MessageType.HALT, this.id, "none"));
+				hasSentHaltMessage = true;
+			}
+			numHaltMessagesReceived++;
 			break;
 		default:
 		}
+	}
+
+	private void processSnapshotMessage(Message snapshotMessage) {
+		// TODO: Do something with snapshot message.
+		Snapshot snapshot = Snapshot.parseSnapshot(snapshotMessage.getBody());
+		if (snapshotsCollectedThisRound[snapshotMessage.getSenderId()] == null) {
+			snapshotsCollectedThisRound[snapshotMessage.getSenderId()] = snapshot;
+			numSnapshotsCollectedThisRound++;
+
+			if (numSnapshotsCollectedThisRound == totalNodes) {
+				if (systemHasTerminated(snapshotsCollectedThisRound)) {
+					broadcast(new Message(MessageType.HALT, this.id, "none"));
+					hasSentHaltMessage = true;
+				} else {
+					numSnapshotsCollectedThisRound = 0;
+					Arrays.fill(snapshotsCollectedThisRound, null);
+				}
+			}
+		}
+	}
+
+	private static boolean systemHasTerminated(Snapshot[] snapshots) {
+		for (Snapshot snapshot : snapshots) {
+			if (snapshot.isActive()
+				|| (snapshot.canBeReactivated() && snapshot.getNumQueuedMessages() > 0)) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 }

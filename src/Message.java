@@ -17,6 +17,10 @@ public class Message {
 		return this.type;
 	}
 
+	public int getSenderId() {
+		return this.senderId;
+	}
+	
 	public String getBody() {
 		return this.body;
 	}

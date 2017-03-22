@@ -1,0 +1,28 @@
+
+
+public class Snapshot {
+
+	private final boolean active;
+
+	private final boolean canBeReactivated;
+
+	private final int numQueuedMessages;
+
+	public Snapshot(boolean active, boolean canBeReactivated, int numQueuedMessages) {
+		this.active = active;
+		this.canBeReactivated = canBeReactivated;
+		this.numQueuedMessages = numQueuedMessages;
+	}
+
+	public boolean isActive() {
+		return this.active;
+	}
+
+	public boolean canBeReactivated() {
+		return this.canBeReactivated;
+	}
+
+	public int getNumQueuedMessages() {
+		return this.numQueuedMessages;
+	}
+}
