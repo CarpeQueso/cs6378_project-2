@@ -2,6 +2,9 @@ import java.io.*;
 import java.net.Socket;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Random;
+import java.util.Set;
 
 
 public class Node implements Runnable {
@@ -39,6 +42,8 @@ public class Node implements Runnable {
 
 	private ConcurrentLinkedQueue<Message> messageQueue;
 
+	private LinkedList<Message> deferQueue;
+
 	private VectorClock vectorClock;
 
 /**
@@ -67,6 +72,7 @@ public class Node implements Runnable {
 		this.serverController = new ServerController(port, messageQueue);
 		this.neighbors = new HashMap<>();
 		this.messageQueue = new ConcurrentLinkedQueue<>();
+		this.deferQueue = new LinkedList<>();
 		this.vectorClock = new VectorClock(totalNodes);
 	}
 
@@ -116,7 +122,7 @@ public class Node implements Runnable {
 		return this.mapActive;
 	}
 		
-	public void unicast(int neighborId, Message message) {
+	public synchronized void unicast(int neighborId, Message message) {
 		Neighbor neighbor = neighbors.get(neighborId);
 
 		if (neighbor == null) return;
@@ -133,7 +139,7 @@ public class Node implements Runnable {
 		}
 	}
 	
-	public void broadcast(Message message) {
+	public synchronized void broadcast(Message message) {
 		for (Neighbor neighbor : neighbors.values()) {
 			try(
 				PrintWriter out = new PrintWriter(neighbor.getSocket().getOutputStream(), true)
@@ -150,7 +156,29 @@ public class Node implements Runnable {
 
 	public void run() {
 		// Assumes node has been activated prior to running
-		
+		Random random = new Random();
+		int messageRange = maxPerActive - minPerActive;
+		int messagesToSend = random.nextInt(messageRange) + minPerActive; 
+		int messagesSentThisCycle = 0;
+		Set<Integer> neighborIdSet = neighbors.keySet();
+		Integer[] neighborIds = neighborIdSet.toArray(new Integer[0]);
+
+		while (messagesSentThisCycle < messagesToSend && mapTotalMessagesSent < maxNumber) {
+			int nextMessageNeighborId = random.nextInt(neighborIds.length);
+			this.vectorClock.increment(this.id);
+			String vectorClockString = this.vectorClock.toString();
+
+			unicast(nextMessageNeighborId, new Message(MessageType.MAP, this.id, vectorClockString));
+			messagesSentThisCycle++;
+			mapTotalMessagesSent++;
+			try {
+				Thread.sleep(minSendDelay);
+			} catch (InterruptedException e) {
+
+			}
+		}
+
+		mapDeactivate();
 	}
 
 	public int getId() {
@@ -175,6 +203,10 @@ public class Node implements Runnable {
 				mapActivate();
 				new Thread(this).start();
 			}
+			break;
+		case SNAPSHOT:
+			break;
+		case HALT:
 			break;
 		default:
 		}

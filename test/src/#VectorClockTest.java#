@@ -12,17 +12,17 @@ public class VectorClockTest {
 		Assert.assertArrayEquals(expectedClockVector, vc.getClockVector());
 	}
 
-	//@Test public void Should__UpdateClockVectorBasedOnGivenClock__When__UpdateCalled() {
-	//	int clockSize = 4;
-	//
-	//	VectorClock clockToUpdate = new VectorClock(clockSize);
-	//	int[] clockValues = { 2, 4, 1, 8 };
-	//	VectorClock clockToPass = new VectorClock(clockSize, clockValues);
-	//
-	//	clockToUpdate.update(clockToPass);
-	//
-	//	Assert.assertArrayEquals(clockValues, clockToUpdate.getClockVector());
-	//}
+	/*@Test public void Should__UpdateClockVectorBasedOnGivenClock__When__UpdateCalled() {
+		int clockSize = 4;
+
+		VectorClock clockToUpdate = new VectorClock(clockSize);
+		int[] clockValues = { 2, 4, 1, 8 };
+		VectorClock clockToPass = new VectorClock(clockSize, clockValues);
+
+		clockToUpdate.update(clockToPass);
+
+		Assert.assertArrayEquals(clockValues, clockToUpdate.getClockVector());
+	}
 
 	@Test public void Should__ReturnSpaceSeparatedClockVectorString__When__ToStringCalled() {
 		int[] clockValues = { 0, 2, 4, 6 };
