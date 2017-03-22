@@ -28,6 +28,9 @@ public class Message {
 		case MAP:
 			sb.append("MAP");
 			break;
+		case MARKER:
+			sb.append("MARKER");
+			break;
 		case SNAPSHOT:
 			sb.append("SNAPSHOT");
 			break;
@@ -54,6 +57,8 @@ public class Message {
 
 		if (messageComponents[0].equals("MAP")) {
 			type = MessageType.MAP;
+		} else if (messageComponents[0].equals("MARKER")) {
+			type = MessageType.MARKER;
 		} else if (messageComponents[0].equals("SNAPSHOT")) {
 			type = MessageType.SNAPSHOT;
 		} else if (messageComponents[0].equals("HALT")) {
