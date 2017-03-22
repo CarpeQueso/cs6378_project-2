@@ -139,7 +139,18 @@ public class Node implements Runnable {
 			}	
 		}
 
-		// TODO: Print config file information
+		try (PrintWriter pw = new PrintWriter("../" + this.id + ".out", "UTF-8")) {
+			for (Snapshot snapshot : snapshotsTaken) {
+				int[] clockVector = snapshot.getClockVector();
+				pw.print(clockVector[0]);
+				for (int i = 1; i < clockVector.length; i++) {
+					pw.print(" " + clockVector[i]);
+				}
+				pw.println();
+			}
+		} catch (IOException e) {
+			System.err.println("Could not open output file");
+		}
 	}
 
 	public void startServer() {
