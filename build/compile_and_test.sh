@@ -2,8 +2,8 @@
 
 dot="$(cd "$(dirname "$0")"; pwd)"
 
-junit_path=/Users/jon/java-extras/junit/junit_4-12.jar
-hamcrest_path=/Users/jon/java-extras/hamcrest/hamcrest-core_1-3.jar
+junit_path=~/java-extras/junit/junit_4-12.jar
+hamcrest_path=~/java-extras/hamcrest/hamcrest-core_1-3.jar
 export CLASSPATH=$dot/../bin:$dot/../test/bin:$junit_path:$hamcrest_path
 
 

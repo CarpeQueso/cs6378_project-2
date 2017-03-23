@@ -18,7 +18,7 @@ public class Main {
 	
 	public void parseConfig(){
 		try {
-			RandomAccessFile configuration = new RandomAccessFile("config.txt","rw");
+			RandomAccessFile configuration = new RandomAccessFile("/home/012/j/ja/jac161530/CS6378/cs6378_project-2/config.txt","rw");
 			String[] host = read(configuration).split(" ");
 			nodeNumber = Integer.parseInt(host[0]);
 			minPeractive = Integer.parseInt(host[1]);
@@ -56,7 +56,7 @@ public class Main {
 	//this method ignores all annotations
 		String back;
 		back = config.readLine();
-		while(back.startsWith("#") | back.replaceAll("\\s", "").matches("")){
+		while(back.startsWith("#") || back.replaceAll("\\s", "").matches("")){
 			back = config.readLine();	
 		}
 		if(back.contains("#")){
@@ -91,15 +91,32 @@ public class Main {
 		
 		return spanningTree;
 	}
-	
+
+	public void run(String arg) {
+		parseConfig();
+		HashMap<Integer, ArrayList<Integer>> spanningTree = generateST();
+
+		int id = Integer.parseInt(arg);
+		String hostname = hostInfo.get(id)[1];
+		int port = Integer.parseInt(hostInfo.get(id)[2]);
+		int parentNodeId = 0;
+		if (id == 0) {
+			parentNodeId = -1;
+		} else {
+			for (Integer i : spanningTree.keySet()) {
+				if (spanningTree.get(i).contains(id)) {
+					parentNodeId = i;
+				}
+			}
+		}
+		System.out.println(id + ":" + parentNodeId);
+
+		Node node = new Node(id, hostname, port, nodeNumber, minPeractive, maxPeractive, minSendDelay, snapshotDelay, maxNumber, parentNodeId);
+
+
+	}
+
 	public static void main(String[] args) {		
-		System.out.println(Arrays.toString(args));
-		
-		Main main = new Main();
-		main.parseConfig();
-		main.generateST();
-
-		//Node node = new Node();
-
+		new Main().run(args[0]);
 	}
 }
