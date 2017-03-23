@@ -67,39 +67,51 @@ public class Main {
 		return back;
 }
 	
-	public HashMap<Integer,ArrayList<Integer>> generateST(){
-		HashMap<Integer,ArrayList<Integer>> spanningTree = new HashMap<Integer,ArrayList<Integer>>();
+	public HashMap<Integer,Integer> generateST(){
+		HashMap<Integer,Integer> spanningTree = new HashMap<Integer,Integer>(); 
+//for spanningTree<i,j>,i represents node i, and j represents i's direct parent,node 0 is always the root;
 		ArrayList<Integer> sum =new ArrayList<Integer>();
 		sum.add(0);
-	    for(int i=0;i<nodeNumber;i++){	 //initialize spanningTree
-	    	spanningTree.put(i, new ArrayList<Integer>());
-	    }
+//	    for(int i=0;i<nodeNumber;i++){	 //initialize spanningTree
+//	    	spanningTree.put(i, new ArrayList<Integer>());
+//	    }
 	    
 		for(int i=0;i<nodeNumber;i++){
 			for(int j:neighborName.get(i)){
 				if(!sum.contains(j)){
-					spanningTree.get(i).add(j);
-					spanningTree.get(j).add(i);
+					spanningTree.put(j, i);
+//					spanningTree.get(i).add(j);
+//					spanningTree.get(j).add(i);
 					sum.add(j);
 				}
 			}
 		}
-		
-//		for(int i=0;i<spanningTree.size();i++){
-//			System.out.println(spanningTree.get(i));
-//		}
+
+			System.out.println(spanningTree);
 		
 		return spanningTree;
 	}
 	
+	public void printParsing(){ //test for the parseConfig method
+		System.out.println( nodeNumber+" "+ minPeractive+" "+maxPeractive+" "+
+				minSendDelay+" "+snapshotDelay+" "+maxNumber);
+		for(int i=0;i<nodeNumber;i++){
+			System.out.print("host info for node ");
+			for(int j=0;j<hostInfo.get(i).length;j++){
+				System.out.print(hostInfo.get(i)[j]+" ");
+			}
+			System.out.println();
+		}
+		System.out.println("neighbor for each node:"+neighborName);
+	}
+	
 	public static void main(String[] args) {		
-		System.out.println(Arrays.toString(args));
 		
 		Main main = new Main();
 		main.parseConfig();
 		main.generateST();
+		main.printParsing();
 
-		//Node node = new Node();
-
+		
 	}
 }

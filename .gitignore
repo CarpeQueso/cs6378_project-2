@@ -3,3 +3,4 @@ bin/*.class
 test/bin/*.class
 launch/*
 #*
+/bin/
