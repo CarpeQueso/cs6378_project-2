@@ -28,6 +28,7 @@ public class Message {
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 
+		// TODO: make these the name() values of the enum type
 		switch (type) {
 		case MAP:
 			sb.append("MAP");

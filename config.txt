@@ -5,8 +5,8 @@
 2 dc04.utdallas.edu 4026
 3 dc05.utdallas.edu 4027
 4 dc06.utdallas.edu 4028
-1 4 	# space delimited list of neighbors for node 0
-2 3 4 	# space delimited list of neighbors for node 1
-0 1 3 	# . . . node 2
-0 4 	# . . . node 3
-1 3 	# . . . node 4
+1 3 	# space delimited list of neighbors for node 0
+0 2 4 	# space delimited list of neighbors for node 1
+1 3 4 	# . . . node 2
+0 2 4 	# . . . node 3
+1 2 3 	# . . . node 4

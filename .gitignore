@@ -2,5 +2,6 @@ launch/compile.sh
 bin/*.class
 test/bin/*.class
 launch/*
+*.out
 #*
 /bin/

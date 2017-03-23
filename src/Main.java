@@ -43,9 +43,9 @@ public class Main {
 				neighborName.put(i,c);
 			}
 			
-//			for(int i=0;i<nodeNumber;i++){
-//				System.out.println(neighborName.get(i));
-//			}
+//		for(int i=0;i<nodeNumber;i++){
+//			System.out.println(neighborName.get(i));
+//		}
 			
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -87,7 +87,7 @@ public class Main {
 			}
 		}
 
-			System.out.println(spanningTree);
+//			System.out.println(spanningTree);
 		
 		return spanningTree;
 	}
@@ -113,6 +113,8 @@ public class Main {
 		for (Integer neighborId : neighborIds) {
 			String neighborHostname = hostInfo.get(neighborId)[1];
 			int neighborPort = Integer.parseInt(hostInfo.get(neighborId)[2]);
+			//System.out.printf("To %d adding %d:%s:%d\n", id, neighborId, neighborHostname,
+				//	neighborPort);
 
 			node.addNeighbor(neighborId, neighborHostname, neighborPort);
 		}
@@ -127,6 +129,8 @@ public class Main {
 
 		node.begin();
 		node.stopServer();
+
+		System.out.printf("Node %d has finished\n", id);
 	}
 
 	
