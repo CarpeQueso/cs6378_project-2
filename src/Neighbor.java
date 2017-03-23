@@ -8,15 +8,12 @@ public class Neighbor {
 
 	private final int port;
 
-	private final Socket socket;
-
 	private boolean enabled;
 
-	public Neighbor(int id, String hostname, int port, Socket socket) {
+	public Neighbor(int id, String hostname, int port) {
 		this.id = id;
 		this.hostname = hostname;
 		this.port = port;
-		this.socket = socket;
 
 		this.enabled = true;
 	}
@@ -43,9 +40,5 @@ public class Neighbor {
 
 	public int getPort() {
 		return this.port;
-	}
-
-	public Socket getSocket() {
-		return this.socket;
 	}
 }

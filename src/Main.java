@@ -67,34 +67,34 @@ public class Main {
 		return back;
 }
 	
-	public HashMap<Integer,ArrayList<Integer>> generateST(){
-		HashMap<Integer,ArrayList<Integer>> spanningTree = new HashMap<Integer,ArrayList<Integer>>();
+	public HashMap<Integer,Integer> generateST(){
+		HashMap<Integer,Integer> spanningTree = new HashMap<Integer,Integer>(); 
+//for spanningTree<i,j>,i represents node i, and j represents i's direct parent,node 0 is always the root;
 		ArrayList<Integer> sum =new ArrayList<Integer>();
 		sum.add(0);
-	    for(int i=0;i<nodeNumber;i++){	 //initialize spanningTree
-	    	spanningTree.put(i, new ArrayList<Integer>());
-	    }
+//	    for(int i=0;i<nodeNumber;i++){	 //initialize spanningTree
+//	    	spanningTree.put(i, new ArrayList<Integer>());
+//	    }
 	    
 		for(int i=0;i<nodeNumber;i++){
 			for(int j:neighborName.get(i)){
 				if(!sum.contains(j)){
-					spanningTree.get(i).add(j);
-					spanningTree.get(j).add(i);
+					spanningTree.put(j, i);
+//					spanningTree.get(i).add(j);
+//					spanningTree.get(j).add(i);
 					sum.add(j);
 				}
 			}
 		}
-		
-//		for(int i=0;i<spanningTree.size();i++){
-//			System.out.println(spanningTree.get(i));
-//		}
+
+			System.out.println(spanningTree);
 		
 		return spanningTree;
 	}
 
 	public void run(String arg) {
 		parseConfig();
-		HashMap<Integer, ArrayList<Integer>> spanningTree = generateST();
+		HashMap<Integer, Integer> spanningTree = generateST();
 
 		int id = Integer.parseInt(arg);
 		String hostname = hostInfo.get(id)[1];
@@ -103,18 +103,47 @@ public class Main {
 		if (id == 0) {
 			parentNodeId = -1;
 		} else {
-			for (Integer i : spanningTree.keySet()) {
-				if (spanningTree.get(i).contains(id)) {
-					parentNodeId = i;
-				}
-			}
+			parentNodeId = spanningTree.get(id);
 		}
+
 		System.out.println(id + ":" + parentNodeId);
 
 		Node node = new Node(id, hostname, port, nodeNumber, minPeractive, maxPeractive, minSendDelay, snapshotDelay, maxNumber, parentNodeId);
+		ArrayList<Integer> neighborIds = neighborName.get(id);
+		for (Integer neighborId : neighborIds) {
+			String neighborHostname = hostInfo.get(neighborId)[1];
+			int neighborPort = Integer.parseInt(hostInfo.get(neighborId)[2]);
 
+			node.addNeighbor(neighborId, neighborHostname, neighborPort);
+		}
 
+		node.startServer();
+				
+		try {
+			Thread.sleep(10000);
+		} catch (InterruptedException e) {
+			System.err.println("Thread sleep before server start was interrupted");
+		}
+
+		node.begin();
+		node.stopServer();
 	}
+
+	
+	public void printParsing(){ //test for the parseConfig method
+		System.out.println( nodeNumber+" "+ minPeractive+" "+maxPeractive+" "+
+				minSendDelay+" "+snapshotDelay+" "+maxNumber);
+		for(int i=0;i<nodeNumber;i++){
+			System.out.print("host info for node ");
+			for(int j=0;j<hostInfo.get(i).length;j++){
+				System.out.print(hostInfo.get(i)[j]+" ");
+			}
+			System.out.println();
+		}
+		System.out.println("neighbor for each node:"+neighborName);
+	}
+	
+
 
 	public static void main(String[] args) {		
 		new Main().run(args[0]);

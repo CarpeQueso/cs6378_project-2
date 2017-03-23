@@ -92,22 +92,17 @@ public class Node implements Runnable {
 		this.numMarkerMessagesReceived = 0;
 		this.mapTotalMessagesSent = 0;
 		this.numSnapshotsCollectedThisRound = 0;
-		this.serverController = new ServerController(port, messageQueue);
 		this.neighbors = new HashMap<>();
 		this.messageQueue = new ConcurrentLinkedQueue<>();
 		this.deferQueue = new LinkedList<>();
 		this.snapshotsTaken = new LinkedList<>();
 		this.vectorClock = new VectorClock(totalNodes);
 		this.snapshotsCollectedThisRound = new Snapshot[totalNodes];
+		this.serverController = new ServerController(port, messageQueue);
 	}
 
 	public void addNeighbor(int id, String hostname, int port) {
-		try {
-			Socket socket = new Socket(hostname, port);
-			this.neighbors.put(id, new Neighbor(id, hostname, port, socket));
-		} catch (IOException e) {
-			System.err.println("Could not create neighbor socket");
-		}
+		this.neighbors.put(id, new Neighbor(id, hostname, port));
 	}
 
 	public void begin() {
@@ -127,15 +122,18 @@ public class Node implements Runnable {
 
 			if (!deferQueue.isEmpty() && !snapshotInProgress) {
 				while (!deferQueue.isEmpty()) {
-					processMessage(messageQueue.poll());
+					processMessage(deferQueue.poll());
 				}
 			}
 
-			if (this.id == 0 && System.currentTimeMillis() - timer > this.snapshotDelay) {
+			if (this.id == 0 && System.currentTimeMillis() - timer > this.snapshotDelay
+					&& numSnapshotsCollectedThisRound == 0) {
 				// Initiate Snapshot
+				System.out.println("Snapshot initiated");
 				broadcast(new Message(MessageType.MARKER, this.id, "none"));
 				hasSentMarkerMessage = true;
 				snapshotInProgress = true;
+				timer = System.currentTimeMillis();
 			}	
 		}
 
@@ -175,11 +173,14 @@ public class Node implements Runnable {
 		
 	public synchronized void unicast(int neighborId, Message message) {
 		Neighbor neighbor = neighbors.get(neighborId);
+		System.out.println("Unicast " + message.getType().name() + ","
+				+ message.getSenderId() + "->" + neighborId);
 
 		if (neighbor == null) return;
 
 		try(
-			PrintWriter out = new PrintWriter(neighbor.getSocket().getOutputStream(), true)
+			Socket socket = new Socket(neighbor.getHostname(), neighbor.getPort());
+			PrintWriter out = new PrintWriter(socket.getOutputStream(), true)
 			) {
 			if (neighbor.isEnabled()) {
 				out.println(message.toString());
@@ -187,13 +188,16 @@ public class Node implements Runnable {
 		} catch (IOException e) {
 			System.err.println("Unable to send unicast message to neighbor with id: "
 							   + neighbor.getId());
+			e.printStackTrace();
 		}
 	}
 	
 	public synchronized void broadcast(Message message) {
+		System.out.println("Broadcast " + message.getType().name() + " from " + this.id);
 		for (Neighbor neighbor : neighbors.values()) {
 			try(
-				PrintWriter out = new PrintWriter(neighbor.getSocket().getOutputStream(), true)
+				Socket socket = new Socket(neighbor.getHostname(), neighbor.getPort());
+				PrintWriter out = new PrintWriter(socket.getOutputStream(), true)
 			   ) {
 				if (neighbor.isEnabled()) {
 					out.println(message.toString());
@@ -215,7 +219,7 @@ public class Node implements Runnable {
 		Integer[] neighborIds = neighborIdSet.toArray(new Integer[0]);
 
 		while (messagesSentThisCycle < messagesToSend && mapTotalMessagesSent < maxNumber) {
-			int nextMessageNeighborId = random.nextInt(neighborIds.length);
+			int nextMessageNeighborId = neighborIds[random.nextInt(neighborIds.length)];
 			this.vectorClock.increment(this.id);
 			String vectorClockString = this.vectorClock.toString();
 
@@ -274,12 +278,15 @@ public class Node implements Runnable {
 				boolean canBeReactivated = mapTotalMessagesSent < maxNumber;
 				int numQueuedMessages = deferQueue.size();
 				int[] clockVector = vectorClock.getClockVector();
+				numMarkerMessagesReceived = 0;
+				hasSentMarkerMessage = false;
 				
 				Snapshot snapshot
 					= new Snapshot(active, canBeReactivated, numQueuedMessages, clockVector);
 				snapshotsTaken.add(snapshot);
 				if (id == 0) {
 					snapshotsCollectedThisRound[0] = snapshot;
+					numSnapshotsCollectedThisRound++;
 				} else {
 					unicast(parentNodeId,
 							new Message(MessageType.SNAPSHOT, this.id, snapshot.toString()));
@@ -300,6 +307,7 @@ public class Node implements Runnable {
 				broadcast(new Message(MessageType.HALT, this.id, "none"));
 				hasSentHaltMessage = true;
 			}
+			neighbors.get(message.getSenderId()).disable();
 			numHaltMessagesReceived++;
 			break;
 		default:
@@ -307,13 +315,13 @@ public class Node implements Runnable {
 	}
 
 	private void processSnapshotMessage(Message snapshotMessage) {
-		// TODO: Do something with snapshot message.
 		Snapshot snapshot = Snapshot.parseSnapshot(snapshotMessage.getBody());
 		if (snapshotsCollectedThisRound[snapshotMessage.getSenderId()] == null) {
 			snapshotsCollectedThisRound[snapshotMessage.getSenderId()] = snapshot;
 			numSnapshotsCollectedThisRound++;
 
 			if (numSnapshotsCollectedThisRound == totalNodes) {
+				System.out.println("Node 0 has received all snapshots");
 				if (systemHasTerminated(snapshotsCollectedThisRound)) {
 					broadcast(new Message(MessageType.HALT, this.id, "none"));
 					hasSentHaltMessage = true;

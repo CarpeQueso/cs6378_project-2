@@ -16,7 +16,6 @@ public class ClientConnectionManager implements Runnable {
 	public ClientConnectionManager(Socket socket, Queue<Message> messageQueue) {
 		this.socket = socket;
 		this.messageQueue = messageQueue;
-		this.running = true;
 	}
 
 	public void run() {
@@ -25,7 +24,7 @@ public class ClientConnectionManager implements Runnable {
 				    = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
 			String messageString = reader.readLine();
 
-			while (running && messageString != null) {
+			while (messageString != null) {
 				Message message = Message.parseMessage(messageString);
 				if (message != null) {
 					messageQueue.offer(message);
@@ -39,9 +38,5 @@ public class ClientConnectionManager implements Runnable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-	}
-
-	public void stop() {
-		this.running = false;
 	}
 }

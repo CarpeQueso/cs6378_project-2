@@ -11,8 +11,6 @@ public class ServerController implements Runnable {
 
     private Queue<Message> messageQueue;
 
-	private ArrayList<ClientConnectionManager> clients;
-
     private volatile boolean running;
 
     public ServerController(int port, Queue<Message> messageQueue) {
@@ -26,10 +24,7 @@ public class ServerController implements Runnable {
         try (ServerSocket serverSocket = new ServerSocket(this.port)) {
             while (running) {
                 Socket socket = serverSocket.accept();
-				ClientConnectionManager client
-					= new ClientConnectionManager(socket, messageQueue);
-				clients.add(client);
-                new Thread(client).start();
+                new Thread(new ClientConnectionManager(socket, messageQueue)).start();
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -39,8 +34,5 @@ public class ServerController implements Runnable {
 
     public void stop() {
         running = false;
-		for (ClientConnectionManager client : clients) {
-			client.stop();
-		}
     }
 }
