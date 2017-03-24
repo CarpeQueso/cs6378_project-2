@@ -136,10 +136,11 @@ public class Node {
 
 				unicast(nextMessageNeighborId,
 						new Message(MessageType.MAP, this.id, vectorClockString));
-				if (mapMessageNeighborIdQueue.isEmpty()) {
+				mapTotalMessagesSent++;
+				if (mapMessageNeighborIdQueue.isEmpty()
+						|| mapTotalMessagesSent == maxNumber) {
 					mapDeactivate();
 				}
-				mapTotalMessagesSent++;
 				mapTimer = System.currentTimeMillis();
 			}
 
