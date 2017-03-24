@@ -8,7 +8,7 @@ import java.util.Random;
 import java.util.Set;
 
 
-public class Node implements Runnable {
+public class Node {
 
 	private final int id;
 
@@ -57,6 +57,8 @@ public class Node implements Runnable {
 
 	private LinkedList<Message> deferQueue;
 
+	private LinkedList<Integer> mapMessageNeighborIdQueue;
+	
 	private LinkedList<Snapshot> snapshotsTaken;
 
 	private VectorClock vectorClock;
@@ -95,6 +97,7 @@ public class Node implements Runnable {
 		this.neighbors = new HashMap<>();
 		this.messageQueue = new ConcurrentLinkedQueue<>();
 		this.deferQueue = new LinkedList<>();
+		this.mapMessageNeighborIdQueue = new LinkedList<>();
 		this.snapshotsTaken = new LinkedList<>();
 		this.vectorClock = new VectorClock(totalNodes);
 		this.snapshotsCollectedThisRound = new Snapshot[totalNodes];
@@ -107,12 +110,12 @@ public class Node implements Runnable {
 
 	public void begin() {
 		long timer = System.currentTimeMillis();
+		long mapTimer = 0;
 		this.running = true;
 
 		if (this.id == 0) {
 			mapActivate();
-			new Thread(this).start();
-
+			buildMapMessageQueue();
 		}
 
 		while (numHaltMessagesReceived < neighbors.size()) {
@@ -124,6 +127,22 @@ public class Node implements Runnable {
 				processMessage(messageQueue.poll());
 			}
 
+			if (!snapshotInProgress && !mapMessageNeighborIdQueue.isEmpty()
+				&& System.currentTimeMillis() - mapTimer > this.minSendDelay
+				&& mapTotalMessagesSent < maxNumber) {
+				int nextMessageNeighborId = mapMessageNeighborIdQueue.poll();
+				this.vectorClock.increment(this.id);
+				String vectorClockString = this.vectorClock.toString();
+
+				unicast(nextMessageNeighborId,
+						new Message(MessageType.MAP, this.id, vectorClockString));
+				if (mapMessageNeighborIdQueue.isEmpty()) {
+					mapDeactivate();
+				}
+				mapTotalMessagesSent++;
+				mapTimer = System.currentTimeMillis();
+			}
+
 			if (this.id == 0 && System.currentTimeMillis() - timer > this.snapshotDelay
 					&& numSnapshotsCollectedThisRound == 0) {
 				// Initiate Snapshot
@@ -131,7 +150,7 @@ public class Node implements Runnable {
 				snapshotInProgress = true;
 				broadcast(new Message(MessageType.MARKER, this.id, "none"));
 				timer = System.currentTimeMillis();
-					}	
+			}	
 		}
 
 		try (FileWriter fw = new FileWriter(
@@ -206,34 +225,17 @@ public class Node implements Runnable {
 		}
 	}
 
-	public void run() {
+	public void buildMapMessageQueue() {
 		// Assumes node has been activated prior to running
 		Random random = new Random();
 		int messageRange = maxPerActive - minPerActive;
 		int messagesToSend = random.nextInt(messageRange) + minPerActive; 
-		int messagesSentThisCycle = 0;
 		Set<Integer> neighborIdSet = neighbors.keySet();
 		Integer[] neighborIds = neighborIdSet.toArray(new Integer[0]);
 
-		while (messagesSentThisCycle < messagesToSend && mapTotalMessagesSent < maxNumber) {
-			if (!snapshotInProgress) {
-				int nextMessageNeighborId = neighborIds[random.nextInt(neighborIds.length)];
-				this.vectorClock.increment(this.id);
-				String vectorClockString = this.vectorClock.toString();
-
-				unicast(nextMessageNeighborId,
-						new Message(MessageType.MAP, this.id, vectorClockString));
-				messagesSentThisCycle++;
-				mapTotalMessagesSent++;
-				try {
-					Thread.sleep(minSendDelay);
-				} catch (InterruptedException e) {
-
-				}
-			}
+		for (int i = 0; i < messagesToSend; i++) {
+			mapMessageNeighborIdQueue.add(neighborIds[random.nextInt(neighborIds.length)]);
 		}
-
-		mapDeactivate();
 	}
 
 	public int getId() {
@@ -259,7 +261,7 @@ public class Node implements Runnable {
 
 				if (!isMapActive() && mapTotalMessagesSent < maxNumber) {
 					mapActivate();
-					new Thread(this).start();
+					buildMapMessageQueue();
 				}
 			}
 			break;
@@ -334,9 +336,9 @@ public class Node implements Runnable {
 	private static boolean systemHasTerminated(Snapshot[] snapshots) {
 		for (Snapshot snapshot : snapshots) {
 			if (snapshot.isActive()
-					|| (snapshot.canBeReactivated() && snapshot.getNumQueuedMessages() > 0)) {
+				|| (snapshot.canBeReactivated() && snapshot.getNumQueuedMessages() > 0)) {
 				return false;
-					}
+			}
 		}
 
 		return true;
