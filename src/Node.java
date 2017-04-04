@@ -65,6 +65,8 @@ public class Node {
 
 	private Snapshot[] snapshotsCollectedThisRound;
 
+	private int[] currentSnapshotVector;
+
 	/**
 	 * static int messageSent;
 	 * public sendMessage(){messageSent++;}
@@ -100,6 +102,7 @@ public class Node {
 		this.mapMessageNeighborIdQueue = new LinkedList<>();
 		this.snapshotsTaken = new LinkedList<>();
 		this.vectorClock = new VectorClock(totalNodes);
+		this.currentSnapshotVector = new int[totalNodes];
 		this.snapshotsCollectedThisRound = new Snapshot[totalNodes];
 		this.serverController = new ServerController(port, messageQueue);
 	}
@@ -119,15 +122,17 @@ public class Node {
 		}
 
 		while (numHaltMessagesReceived < neighbors.size()) {
-			while (!deferQueue.isEmpty() && !snapshotInProgress) {
-				processMessage(deferQueue.poll());
+			if (!snapshotInProgress) {
+				while (!deferQueue.isEmpty()) {
+					processMessage(deferQueue.poll());
+				}
 			}
 
 			if (!messageQueue.isEmpty()) {
 				processMessage(messageQueue.poll());
 			}
 
-			if (!snapshotInProgress && !mapMessageNeighborIdQueue.isEmpty()
+			if (!mapMessageNeighborIdQueue.isEmpty()
 				&& System.currentTimeMillis() - mapTimer > this.minSendDelay
 				&& mapTotalMessagesSent < maxNumber) {
 				int nextMessageNeighborId = mapMessageNeighborIdQueue.poll();
@@ -149,6 +154,8 @@ public class Node {
 				// Initiate Snapshot
 				hasSentMarkerMessage = true;
 				snapshotInProgress = true;
+				this.vectorClock.increment(this.id);
+				this.currentSnapshotVector = this.vectorClock.getClockVector();
 				broadcast(new Message(MessageType.MARKER, this.id, "none"));
 				timer = System.currentTimeMillis();
 			}	
@@ -179,19 +186,19 @@ public class Node {
 		serverController.stop();
 	}
 
-	public synchronized void mapActivate() {
+	public void mapActivate() {
 		this.mapActive = true;
 	}
 
-	public synchronized void mapDeactivate() {
+	public void mapDeactivate() {
 		this.mapActive = false;
 	}
 
-	public synchronized boolean isMapActive() {
+	public boolean isMapActive() {
 		return this.mapActive;
 	}
 
-	public synchronized void unicast(int neighborId, Message message) {
+	public void unicast(int neighborId, Message message) {
 		Neighbor neighbor = neighbors.get(neighborId);
 
 		if (neighbor == null) return;
@@ -210,7 +217,7 @@ public class Node {
 		}
 	}
 
-	public synchronized void broadcast(Message message) {
+	public void broadcast(Message message) {
 		for (Neighbor neighbor : neighbors.values()) {
 			try(
 					Socket socket = new Socket(neighbor.getHostname(), neighbor.getPort());
@@ -267,9 +274,11 @@ public class Node {
 			}
 			break;
 		case MARKER:
+			this.vectorClock.increment(this.id);
 			if (!hasSentMarkerMessage) {
 				hasSentMarkerMessage = true;
 				snapshotInProgress = true;	
+				this.currentSnapshotVector = this.vectorClock.getClockVector();
 				broadcast(new Message(MessageType.MARKER, this.id, "none"));
 			}
 
@@ -279,17 +288,17 @@ public class Node {
 				boolean active = isMapActive();
 				boolean canBeReactivated = mapTotalMessagesSent < maxNumber;
 				int numQueuedMessages = deferQueue.size();
-				int[] clockVector = vectorClock.getClockVector();
 				numMarkerMessagesReceived = 0;
 				hasSentMarkerMessage = false;
 
 				Snapshot snapshot
-					= new Snapshot(active, canBeReactivated, numQueuedMessages, clockVector);
+					= new Snapshot(active, canBeReactivated, numQueuedMessages, this.currentSnapshotVector);
 				snapshotsTaken.add(snapshot);
 				if (id == 0) {
 					snapshotsCollectedThisRound[0] = snapshot;
 					numSnapshotsCollectedThisRound++;
 				} else {
+					this.vectorClock.increment(this.id);
 					unicast(parentNodeId,
 							new Message(MessageType.SNAPSHOT, this.id, snapshot.toString()));
 				}
@@ -297,15 +306,19 @@ public class Node {
 
 			break;
 		case SNAPSHOT:
+			this.vectorClock.increment(this.id);
 			if (this.id == 0) {
 				processSnapshotMessage(message);
 			} else {
+				this.vectorClock.increment(this.id);
 				// Send it upward toward the root of the spanning tree.
 				unicast(parentNodeId, message);
 			}
 			break;
 		case HALT:
+			this.vectorClock.increment(this.id);
 			if (!hasSentHaltMessage) {
+				this.vectorClock.increment(this.id);
 				broadcast(new Message(MessageType.HALT, this.id, "none"));
 				hasSentHaltMessage = true;
 			}
@@ -324,6 +337,7 @@ public class Node {
 
 			if (numSnapshotsCollectedThisRound == totalNodes) {
 				if (systemHasTerminated(snapshotsCollectedThisRound)) {
+					this.vectorClock.increment(this.id);
 					broadcast(new Message(MessageType.HALT, this.id, "none"));
 					hasSentHaltMessage = true;
 				} else {

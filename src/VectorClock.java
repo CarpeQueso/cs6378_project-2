@@ -23,7 +23,7 @@ public class VectorClock {
 		System.arraycopy(vc.getClockVector(), 0, this.clock, 0, size);
 	}
 
-	public synchronized void increment(int index) {
+	public void increment(int index) {
 		assert index >= 0 && index < size;
 
 		clock[index]++;
@@ -33,7 +33,7 @@ public class VectorClock {
 	 * Update this vector clock based on the given vector clock.
 	 * The maximum value for a given position will be stored in this clock.
 	 */
-	public synchronized void updateAndIncrement(VectorClock vc, int index) {
+	public void updateAndIncrement(VectorClock vc, int index) {
 		assert vc.getSize() == this.size;
 		int[] passedClockVector = vc.getClockVector();
 
@@ -46,7 +46,7 @@ public class VectorClock {
 		this.increment(index);
 	}
 
-	public synchronized VectorComparisonType compareTo(VectorClock vc) {
+	public VectorComparisonType compareTo(VectorClock vc) {
 		if (this.size != vc.getSize()) {
 			return VectorComparisonType.INCOMPARABLE;
 		}
@@ -75,11 +75,11 @@ public class VectorClock {
 		return tentativeComparisonType; 
 	}
 
-	public synchronized int getClockValueAtIndex(int index) {
+	public int getClockValueAtIndex(int index) {
 		return this.clock[index];
 	}
 
-	public synchronized int[] getClockVector() {
+	public int[] getClockVector() {
 		int[] clockCopy = new int[this.size];
 
 		System.arraycopy(clock, 0, clockCopy, 0, this.size);
@@ -90,7 +90,7 @@ public class VectorClock {
 		return size;
 	}
 
-	public synchronized String toString() {
+	public String toString() {
 		StringBuilder sb = new StringBuilder(this.size * 2);
 
 		sb.append(clock[0]);
